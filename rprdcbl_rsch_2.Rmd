@@ -10,20 +10,22 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## R Markdown
-*getting data and procession damage*
+*getting data and processing the damage*
 
 ```{r}
 df<-read.csv("repdata_data_StormData.csv")
+lazydf<-df[!df$PROPDMGEXP==""|!df$CROPDMGEXP=="",]
 hundred<-c("H","h")
-df$dmg<- ifelse(grepl(paste(hundred, collapse = "|"),df$PROPDMGEXP, ignore.case = T), df$PROPDMG*100, 0)
+df$dmg<- ifelse(grepl(paste(hundred, collapse = "|"),df$PROPDMGEXP, ignore.case = T), df$pROPDMG*100, 0)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+*how many damages (PROPDMGEXP) are not in letters
+```{r}
+x <- setdiff(df$PROPDMGEXP, c("K", "M", "B", NA))
+sum(df$PROPDMGEXP %in% x)
+table(lazydf$PROPDMGEXP)
 ```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+*how many lazydf$PROPDMGEXP==" " are in lazydf$CROPDMGEXP==" "
+```{r}
+x <- setdiff(c(lazydf$PROPDMGEXP==""), !c(lazydf$CROPDMGEXP==""))
+sum(lazydf$PROPDMGEXP=="" %in% x)
