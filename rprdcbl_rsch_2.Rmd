@@ -1,31 +1,102 @@
 ---
-title: "rprdcbl_rsch_2"
-output: 
+title: "Reproducible Research Assignment 2"
+output:
+  pdf_document: default
   html_document:
     keep_md: yes
 ---
+
+##The purpose of the assignment is to learn to write & present reproducible research using US disaster data
+
+##Snopisis:Predownloaded data was absorbed into R, processesed and massaged to get what we need related to the health & economic impacts. In the following steps I show how I prioriised and subset data with the greatest impacts and most significant exponents
+
+##Steps:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-*getting data and processing the damage*
-
-```{r}
-df<-read.csv("repdata_data_StormData.csv")
-lazydf<-df[!df$PROPDMGEXP==""|!df$CROPDMGEXP=="",]
-hundred<-c("H","h")
-df$dmg<- ifelse(grepl(paste(hundred, collapse = "|"),df$PROPDMGEXP, ignore.case = T), df$pROPDMG*100, 0)
+#1.Process previously downloaded "StormData.csv.bz2"
+```{r include=FALSE}
+library("R.utils")
+library("data.table")
+if(!file.exists("StormData.csv")){
+  R.utils::bunzip2("StormData.csv.bz2", remove = FALSE)}# By setting remove = FALSE you impede bunzip2 from removing the original file.
+df<-data.table::fread("StormData.csv", data.table = FALSE)# By setting data.table = FALSE you get a simple data.frame
+df<-df[,c("EVTYPE","FATALITIES","INJURIES","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")]
 ```
 
-*how many damages (PROPDMGEXP) are not in letters
-```{r}
-x <- setdiff(df$PROPDMGEXP, c("K", "M", "B", NA))
+#2.Aggregate and PRIORITISED TOP 15 EVENTS leasing to fatalities & injuries
+```{r include=FALSE}
+injuries<-df[,c(1:3)]
+ecast<-aggregate(.~EVTYPE, injuries, sum)
+inj<-head(ecast[order(ecast$INJURIES, decreasing=T),], n=15)
+fat<-head(ecast[order(ecast$FATALITIES, decreasing=T),], n=15)
+```
+
+##RESULTS: HEALTH EFFECTS
+
+#3.Plot fatalities
+```{r include=T}
+library("ggplot2")
+qplot(EVTYPE, INJURIES, data=inj)+ geom_bar(stat="identity")+ ylab("No. of Injuries") + xlab("Enviromental Disaster Type") + ggtitle("Estimates of Injuries") + theme(axis.text.x = element_text(angle=80, hjust=1))
+```
+
+#4.Plot injuries
+```{r include=T}
+qplot(EVTYPE, FATALITIES, data=fat)+ geom_bar(stat="identity")+ ylab("No. of Fatalities") + xlab("Enviromental Disaster Type") + ggtitle("Estimates of Fatalities") + theme(axis.text.x = element_text(angle=80, hjust=1))
+```
+
+#5(a).Table all the diffeent types of exponents including NAs ("") with some helpful info<<https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html>>
+```{r include=T}
+table(df$PROPDMGEXP)
+table(df$CROPDMGEXP)
+```
+
+#5(b).Sum up the exponets I prioritised to use
+````{r include=T}
+x <- setdiff(df$PROPDMGEXP, c("", "?", "-1", "0"))
 sum(df$PROPDMGEXP %in% x)
-table(lazydf$PROPDMGEXP)
+y <- setdiff(df$CROPDMGEXP, c("", "?", "-1", "0"))
+sum(df$CROPDMGEXP %in% y)
 ```
-*how many lazydf$PROPDMGEXP==" " are in lazydf$CROPDMGEXP==" "
-```{r}
-x <- setdiff(c(lazydf$PROPDMGEXP==""), !c(lazydf$CROPDMGEXP==""))
-sum(lazydf$PROPDMGEXP=="" %in% x)
+
+#6.Subset dataframe to have at least one exponent each for property or crop 
+```{r include=FALSE}
+df$yes<-ifelse(df$PROPDMGEXP %in% x|df$CROPDMGEXP %in% y,1,0)
+lazydf<-df[df$yes==1,]
+lazydf<-lazydf[,c("EVTYPE","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")]
+df<-NULL#lets get rid of the larger file to simplify
+lazydf$yes<-NULL
+```
+
+#7.Multiply by exponent 
+```{r include=FALSE}
+lazydf$PROPDMGEXP<-as.numeric(chartr("hHKmMB", "223669", lazydf$PROPDMGEXP))
+lazydf$CROPDMGEXP<-as.numeric(chartr("kKmMB", "33669", lazydf$CROPDMGEXP))
+lazydf$SUMCROPDMG<-lazydf$CROPDMG*10^lazydf$CROPDMGEXP
+lazydf$SUMPROPDMG<-lazydf$PROPDMG*10^lazydf$PROPDMGEXP
+lazydf<-lazydf[,c("EVTYPE","SUMPROPDMG","SUMCROPDMG")]
+```
+
+#8 Re-arrange, aggregate & sort
+```{r include=FALSE}
+library("reshape2")
+fmelt<-melt(lazydf, id=c("EVTYPE"), measure.vars=c("SUMPROPDMG", "SUMCROPDMG"))
+fcast<-dcast(fmelt, EVTYPE~variable,sum, na.rm=T)
+property<-head(fcast[order(fcast$SUMPROPDMG, decreasing=T),], n=15)
+crop<-head(fcast[order(fcast$SUMCROPDMG, decreasing=T),], n=15)
+```
+
+##RESULTS: ECONOMIC EFFECTS
+
+#9 Plot property damage 
+```{r include=T}
+library("ggplot2")
+qplot(EVTYPE, SUMPROPDMG, data=property)+ geom_bar(stat="identity")+ ylab("Property Damage Amount $") + xlab("Enviromental Disaster Type") + ggtitle("Estimates of Property Damange") + theme(axis.text.x = element_text(angle=80, hjust=1))
+```
+
+#10. Plot crop damage
+```{r include=T}
+qplot(EVTYPE, SUMCROPDMG, data=crop)+ geom_bar(stat="identity")+ ylab("Property Damage Amount $") + xlab("Enviromental Disaster Type") + ggtitle("Estimates of Crop Damange") + theme(axis.text.x = element_text(angle=80, hjust=1))
+```
