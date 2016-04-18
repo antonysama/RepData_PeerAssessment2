@@ -1,9 +1,9 @@
 ---
 title: "Reproducible Research Assignment 2"
 output:
-  pdf_document: default
   html_document:
     keep_md: yes
+  pdf_document: default
 ---
 
 ##The purpose of the assignment is to learn to write & present reproducible research using US disaster data
@@ -36,13 +36,13 @@ fat<-head(ecast[order(ecast$FATALITIES, decreasing=T),], n=15)
 
 ##RESULTS: HEALTH EFFECTS
 
-#3.Plot fatalities
+#3.Plot injuries
 ```{r include=T}
 library("ggplot2")
 qplot(EVTYPE, INJURIES, data=inj)+ geom_bar(stat="identity")+ ylab("No. of Injuries") + xlab("Enviromental Disaster Type") + ggtitle("Estimates of Injuries") + theme(axis.text.x = element_text(angle=80, hjust=1))
 ```
 
-#4.Plot injuries
+#4.Plot fatalities
 ```{r include=T}
 qplot(EVTYPE, FATALITIES, data=fat)+ geom_bar(stat="identity")+ ylab("No. of Fatalities") + xlab("Enviromental Disaster Type") + ggtitle("Estimates of Fatalities") + theme(axis.text.x = element_text(angle=80, hjust=1))
 ```

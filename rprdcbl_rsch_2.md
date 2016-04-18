@@ -16,7 +16,7 @@
 
 ##RESULTS: HEALTH EFFECTS
 
-#3.Plot fatalities
+#3.Plot injuries
 
 ```r
 library("ggplot2")
@@ -25,7 +25,7 @@ qplot(EVTYPE, INJURIES, data=inj)+ geom_bar(stat="identity")+ ylab("No. of Injur
 
 ![](rprdcbl_rsch_2_files/figure-html/unnamed-chunk-3-1.png)
 
-#4.Plot injuries
+#4.Plot fatalities
 
 ```r
 qplot(EVTYPE, FATALITIES, data=fat)+ geom_bar(stat="identity")+ ylab("No. of Fatalities") + xlab("Enviromental Disaster Type") + ggtitle("Estimates of Fatalities") + theme(axis.text.x = element_text(angle=80, hjust=1))
