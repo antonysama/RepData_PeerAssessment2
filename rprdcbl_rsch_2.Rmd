@@ -1,60 +1,70 @@
 ---
-title: "Reproducible Research Assignment 2"
+title: "Reproducible Analysis of NOAA Weather Related  Damages to Humans, Propoerty and Agriculture"
 output:
   html_document:
     keep_md: yes
   pdf_document: default
 ---
 
-##The purpose of the assignment is to learn to write & present reproducible research using US disaster data
+##The purpose of the assignment is to learn to publish reproducible research using NOAA weather-dsaster data on its impacts on human health, property and agriculture
 
-##Snopisis:Predownloaded data was absorbed into R, processesed and massaged to get what we need related to the health & economic impacts. In the following steps I show how I prioriised and subset data with the greatest impacts and most significant exponents
-
+##Snopisis:NOAA zipped data was read into and unzipped in R, processesed with justifications to get what we need related to the health & economic impacts. In the following steps I will show how I prioriised and subset data with the greatest impacts 
 ##Steps:
-
+##Processing for Question 1: Steps 1-3
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 #1.Process previously downloaded "StormData.csv.bz2"
-```{r include=FALSE}
+```{r include=T}
 library("R.utils")
 library("data.table")
-if(!file.exists("StormData.csv")){
-  R.utils::bunzip2("StormData.csv.bz2", remove = FALSE)}# By setting remove = FALSE you impede bunzip2 from removing the original file.
-df<-data.table::fread("StormData.csv", data.table = FALSE)# By setting data.table = FALSE you get a simple data.frame
-df<-df[,c("EVTYPE","FATALITIES","INJURIES","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")]
+# Here's where we unzip the original file. 
+# By setting remove = FALSE you make use of the original file unzipped file 
+if(!file.exists("repdata-data-StormData.csv")){
+  R.utils::bunzip2("repdata-data-StormData.csv.bz2", remove = FALSE)}
+# By setting data.table = FALSE you get a simple data.frame
+df<-data.table::fread("repdata-data-StormData.csv", data.table = FALSE)
+# Take only what we need to answer both questions
+# Jutification: doing this early will speed up the use of CPU memory
+df<-df[,c("EVTYPE","FATALITIES","INJURIES","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")] 
 ```
 
 #2.Aggregate and PRIORITISED TOP 15 EVENTS leasing to fatalities & injuries
 ```{r include=FALSE}
+# Take what we need to answer the injuries question
 injuries<-df[,c(1:3)]
+# aggregate by type of weather event
 ecast<-aggregate(.~EVTYPE, injuries, sum)
+# oder the injuries and fatalities to take the TOP 15
+# justification is we can focus the plotting on the most important damage
 inj<-head(ecast[order(ecast$INJURIES, decreasing=T),], n=15)
 fat<-head(ecast[order(ecast$FATALITIES, decreasing=T),], n=15)
 ```
 
-##RESULTS: HEALTH EFFECTS
-
-#3.Plot injuries
+#3.Plot fatalities
+# Justifiation to only plot fatalities is that it shows the most serious health effect # On the other hand There's no way of knowing if the injuries a slight or severe
 ```{r include=T}
 library("ggplot2")
-qplot(EVTYPE, INJURIES, data=inj)+ geom_bar(stat="identity")+ ylab("No. of Injuries") + xlab("Enviromental Disaster Type") + ggtitle("Estimates of Injuries") + theme(axis.text.x = element_text(angle=80, hjust=1))
-```
-
-#4.Plot fatalities
-```{r include=T}
 qplot(EVTYPE, FATALITIES, data=fat)+ geom_bar(stat="identity")+ ylab("No. of Fatalities") + xlab("Enviromental Disaster Type") + ggtitle("Estimates of Fatalities") + theme(axis.text.x = element_text(angle=80, hjust=1))
 ```
 
-#5(a).Table all the diffeent types of exponents including NAs ("") with some helpful info<<https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html>>
+##RESULTS & DISCUSSION: Question 1: HEALTH EFFECTS
+# Re-emphasize the decision to only plot fatalities is that it shows the most serious health effect
+# The Top3 categories are : Tornado; Excessive heat & heat in general; and Flash floods & floods in general
+
+##Processing for Question 2: Steps 4-8
+#4.Table all the diffeent types of exponents including NAs ("") with some helpful info<<https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html>>
 ```{r include=T}
 table(df$PROPDMGEXP)
 table(df$CROPDMGEXP)
 ```
 
-#5(b).Sum up the exponets I prioritised to use
+#5.Sum up the exponets I prioritised to use
 ````{r include=T}
+# Following shows the sum of most significant exponents
+# I plan to consider this sub-set as insignificant: c("", "?", "-1", "0")
+# Justification is that it save only the processing of 
 x <- setdiff(df$PROPDMGEXP, c("", "?", "-1", "0"))
 sum(df$PROPDMGEXP %in% x)
 y <- setdiff(df$CROPDMGEXP, c("", "?", "-1", "0"))
@@ -63,15 +73,19 @@ sum(df$CROPDMGEXP %in% y)
 
 #6.Subset dataframe to have at least one exponent each for property or crop 
 ```{r include=FALSE}
+# "yes"", if an observation has at least 1 of the exponents I prioritised above for prop or crop
 df$yes<-ifelse(df$PROPDMGEXP %in% x|df$CROPDMGEXP %in% y,1,0)
+# this is the new df of interest
 lazydf<-df[df$yes==1,]
 lazydf<-lazydf[,c("EVTYPE","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")]
-df<-NULL#lets get rid of the larger file to simplify
-lazydf$yes<-NULL
+#let's get rid of the larger  file now to simplify memory use
+df<-NULL
+lazydf$yes<-NULL 
 ```
 
-#7.Multiply by exponent 
+#7.Multiply damage by exponent  to get value$
 ```{r include=FALSE}
+# thesey first have to made to numeric
 lazydf$PROPDMGEXP<-as.numeric(chartr("hHKmMB", "223669", lazydf$PROPDMGEXP))
 lazydf$CROPDMGEXP<-as.numeric(chartr("kKmMB", "33669", lazydf$CROPDMGEXP))
 lazydf$SUMCROPDMG<-lazydf$CROPDMG*10^lazydf$CROPDMGEXP
@@ -79,16 +93,15 @@ lazydf$SUMPROPDMG<-lazydf$PROPDMG*10^lazydf$PROPDMGEXP
 lazydf<-lazydf[,c("EVTYPE","SUMPROPDMG","SUMCROPDMG")]
 ```
 
-#8 Re-arrange, aggregate & sort
-```{r include=FALSE}
+#8. Re-arrange, aggregate & sort
+```{r include=T}
+#using melt & dcast as it seems to give me greater values for this one. In Q1 the aggregate function gave the same result
 library("reshape2")
 fmelt<-melt(lazydf, id=c("EVTYPE"), measure.vars=c("SUMPROPDMG", "SUMCROPDMG"))
 fcast<-dcast(fmelt, EVTYPE~variable,sum, na.rm=T)
 property<-head(fcast[order(fcast$SUMPROPDMG, decreasing=T),], n=15)
 crop<-head(fcast[order(fcast$SUMCROPDMG, decreasing=T),], n=15)
 ```
-
-##RESULTS: ECONOMIC EFFECTS
 
 #9 Plot property damage 
 ```{r include=T}
@@ -100,3 +113,7 @@ qplot(EVTYPE, SUMPROPDMG, data=property)+ geom_bar(stat="identity")+ ylab("Prope
 ```{r include=T}
 qplot(EVTYPE, SUMCROPDMG, data=crop)+ geom_bar(stat="identity")+ ylab("Property Damage Amount $") + xlab("Enviromental Disaster Type") + ggtitle("Estimates of Crop Damange") + theme(axis.text.x = element_text(angle=80, hjust=1))
 ```
+
+##RESULTS & DISCUSSION: Question 2: ECONOMIC EFFECTS
+# The TOP 3 categories on property effects are from: Floods all types; Hurricanes; Tornadoes 
+# The TOP 3 categories on property effects are from: Droughts; Floods all ypes; Storms
